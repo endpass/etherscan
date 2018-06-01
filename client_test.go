@@ -1,11 +1,23 @@
 package etherscan
 
 import (
+	"io/ioutil"
 	"net/url"
+	"path/filepath"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 )
+
+// Loads fixtures from testdata directory
+func loadTestData(t *testing.T, name string) []byte {
+	path := filepath.Join("testdata", name) // relative path
+	bytes, err := ioutil.ReadFile(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	return bytes
+}
 
 func TestDefaultClient(t *testing.T) {
 	assert := assert.New(t)
