@@ -39,7 +39,7 @@ func (c *Client) Balance(ctx context.Context, addr string) (*big.Int, error) {
 	params.Set("module", "account")
 	params.Set("action", "balance")
 	params.Set("tag", "latest")
-	params.Set("address", "addr")
+	params.Set("address", addr)
 
 	req, err := c.buildRequest(params)
 	if err != nil {
