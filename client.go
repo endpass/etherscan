@@ -1,8 +1,12 @@
 package etherscan
 
 import (
+	"context"
+	"errors"
 	"fmt"
+	"io/ioutil"
 	"net/http"
+	"net/url"
 	"strings"
 )
 
@@ -33,7 +37,55 @@ func (c *Client) setDefaults() error {
 			c.Network, strings.Join(supportedNetworks(), ","))
 	}
 	if c.HTTPClient == nil {
-		c.HTTPClient = &http.Client{}
+		c.HTTPClient = &http.Client{
+			Timeout: clientTimeout,
+		}
 	}
 	return nil
+}
+
+// Construct a new request to the API that is ready to send
+// All methods use GET requests for now
+func (c *Client) buildRequest(params url.Values) (*http.Request, error) {
+	if err := c.setDefaults(); err != nil {
+		return nil, err
+	}
+
+	if params == nil {
+		return nil, errors.New("Params are empty")
+	}
+	if params.Get("module") == "" {
+		return nil, errors.New("Missing required parameter: module")
+	}
+	if params.Get("action") == "" {
+		return nil, errors.New("Missing required parameter: action")
+	}
+	if params.Get("apikey") == "" {
+		params.Set("apikey", c.APIKey)
+	}
+
+	reqURL := c.apiBase + params.Encode()
+	req, err := http.NewRequest("GET", reqURL, nil)
+	if err != nil {
+		return nil, err
+	}
+	req.Header.Set("User-Agent", userAgent)
+	return req, nil
+}
+
+// Sends a request and returns the response body
+func (c *Client) sendRequest(ctx context.Context, req *http.Request) ([]byte, error) {
+	if ctx == nil {
+		return nil, errors.New("Context is nil")
+	}
+	if req == nil {
+		return nil, errors.New("Request is nil")
+	}
+	req = req.WithContext(ctx)
+	resp, err := c.HTTPClient.Do(req)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+	return ioutil.ReadAll(resp.Body)
 }

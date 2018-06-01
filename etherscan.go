@@ -1,4 +1,7 @@
+// Package etherscan is a client library for the etherscan.io API
 package etherscan
+
+import "time"
 
 var (
 	apiEndpoints = map[string]string{
@@ -7,6 +10,9 @@ var (
 		"kovan":   "https://api-kovan.etherscan.io/api",
 		"rinkeby": "https://api-rinkeby.etherscan.io/api",
 	}
+
+	userAgent     = "go-etherscan"
+	clientTimeout = 30 * time.Second
 )
 
 // Returns supported networks based on API endpoints
