@@ -12,6 +12,15 @@ import (
 	"time"
 )
 
+// Types of transactions indexed by Etherscan
+type txType uint8
+
+const (
+	txNormal = iota
+	txInternal
+	txToken
+)
+
 // Response with list of transactions for an address
 type transactionsResponse struct {
 	*baseResponse
@@ -29,20 +38,30 @@ type transactionResponse struct {
 	From              string `json:"from"`
 	To                string `json:"to"`
 	Value             string `json:"value"`
+	TokenName         string `json:"tokenName"`
+	TokenSymbol       string `json:"tokenSymbol"`
+	TokenDecimal      string `json:"tokenDecimal"`
 	Gas               string `json:"gas"`
 	GasPrice          string `json:"gasPrice"`
 	IsError           string `json:"isError"`
+	ErrCode           string `json:"errCode"`
 	TxreceiptStatus   string `json:"txreceipt_status"`
 	Input             string `json:"input"`
+	Type              string `json:"type"`
 	ContractAddress   string `json:"contractAddress"`
 	CumulativeGasUsed string `json:"cumulativeGasUsed"`
 	GasUsed           string `json:"gasUsed"`
+	TraceID           string `json:"traceId"`
 	Confirmations     string `json:"confirmations"`
 }
 
 // Transaction represents a standard Ethereum transaction
 type Transaction struct {
 	Block *Block
+
+	Token *Token
+
+	Internal *InternalTransaction
 
 	Timestamp time.Time
 
@@ -73,18 +92,24 @@ type Transaction struct {
 
 	IsError bool
 
+	// Detailed error from contract
+	Error error
+
 	Confirmations uint64
 
 	// Data sent to transaction, encoded as hex
 	Data string
 }
 
+// Internal transaction is a value transfer inside a contract's code
+type InternalTransaction struct {
+	// Transaction type, such as "call" for a method call
+	Type    string
+	TraceID string
+}
+
 func parseTransaction(tx *transactionResponse) *Transaction {
-	return &Transaction{
-		Block: &Block{
-			Number: parseInt(tx.BlockNumber),
-			Hash:   tx.BlockHash,
-		},
+	parsedTx := &Transaction{
 		Timestamp:       time.Unix(int64(parseInt(tx.TimeStamp)), 0),
 		Hash:            tx.Hash,
 		Nonce:           parseInt(tx.Nonce),
@@ -100,6 +125,34 @@ func parseTransaction(tx *transactionResponse) *Transaction {
 		Data:            tx.Input,
 		ContractAddress: tx.ContractAddress,
 	}
+	// Transaction only has a block if it is confirmed
+	if tx.BlockNumber != "" {
+		parsedTx.Block = &Block{
+			Number: parseInt(tx.BlockNumber),
+			Hash:   tx.BlockHash,
+		}
+	}
+	// ERC20 token transactions, in this case Value is the amount of tokens
+	// transfered
+	if tx.TokenSymbol != "" {
+		parsedTx.Token = &Token{
+			Name:     tx.TokenName,
+			Symbol:   tx.TokenSymbol,
+			Decimals: parseInt(tx.TokenDecimal),
+		}
+	}
+	// Internal transactions should always have a Type
+	if tx.Type != "" {
+		parsedTx.Internal = &InternalTransaction{
+			Type:    tx.Type,
+			TraceID: tx.TraceID,
+		}
+	}
+
+	if tx.ErrCode != "" {
+		parsedTx.Error = errors.New(tx.ErrCode)
+	}
+	return parsedTx
 }
 
 func parseTransactionsResponse(r io.Reader) ([]*Transaction, error) {
@@ -114,13 +167,25 @@ func parseTransactionsResponse(r io.Reader) ([]*Transaction, error) {
 	return transactions, nil
 }
 
-func (c *Client) buildTransactionsRequest(addr string, page, offset int) (*http.Request, error) {
+func (c *Client) buildTransactionsRequest(addr string, page, offset int, category txType) (*http.Request, error) {
+	var action string
 	if page <= 0 {
 		return nil, errors.New("page param must >= 1")
 	}
+	switch category {
+	case txNormal:
+		action = "txlist"
+	case txInternal:
+		action = "txlistinternal"
+	case txToken:
+		action = "tokentx"
+	}
+	if action == "" {
+		return nil, errors.New("Unsupported transaction category")
+	}
 	params := url.Values{}
 	params.Set("module", "account")
-	params.Set("action", "txlist")
+	params.Set("action", action)
 	params.Set("address", addr)
 	params.Set("sort", "desc") //newest transactions first
 	params.Set("page", fmt.Sprint(page))
@@ -128,8 +193,8 @@ func (c *Client) buildTransactionsRequest(addr string, page, offset int) (*http.
 	return c.buildRequest(params)
 }
 
-func (c *Client) transactions(ctx context.Context, addr string, page, offset int) ([]*Transaction, error) {
-	req, err := c.buildTransactionsRequest(addr, page, offset)
+func (c *Client) transactions(ctx context.Context, addr string, page, offset int, category txType) ([]*Transaction, error) {
+	req, err := c.buildTransactionsRequest(addr, page, offset, category)
 	if err != nil {
 		return nil, err
 	}
@@ -141,13 +206,37 @@ func (c *Client) transactions(ctx context.Context, addr string, page, offset int
 	return parseTransactionsResponse(resp.Body)
 }
 
-// Transactions returns a list of transactions to/from the given address
+// Transactions returns a list of standard transactions to/from the given address
 func (c *Client) Transactions(addr string, page, offset int) ([]*Transaction, error) {
-	return c.transactions(context.Background(), addr, page, offset)
+	return c.transactions(context.Background(), addr, page, offset, txNormal)
 }
 
-// Transactions returns a list of transactions to/from the given address
+// TransactionsContext returns a list of standard transactions to/from the given address
 // with a custom context
 func (c *Client) TransactionsContext(ctx context.Context, addr string, page, offset int) ([]*Transaction, error) {
-	return c.transactions(ctx, addr, page, offset)
+	return c.transactions(ctx, addr, page, offset, txNormal)
+}
+
+// TokenTransactions returns a list of ERC20 token transactions to/from the given address
+func (c *Client) TokenTransactions(addr string, page, offset int) ([]*Transaction, error) {
+	return c.transactions(context.Background(), addr, page, offset, txToken)
+}
+
+// TokenTransactionsContext returns a list of ERC20 token transactions to/from the given address
+// with a custom context
+func (c *Client) TokenTransactionsContext(ctx context.Context, addr string, page, offset int) ([]*Transaction, error) {
+	return c.transactions(ctx, addr, page, offset, txToken)
+}
+
+// InternalTransactions returns a list of internal contract transactions for
+// the contract at the given address
+func (c *Client) InternalTransactions(addr string, page, offset int) ([]*Transaction, error) {
+	return c.transactions(context.Background(), addr, page, offset, txToken)
+}
+
+// InternalTransactionsContext returns a list of internal contract transactions for
+// the contract at the given address
+// with a custom context
+func (c *Client) InternalTransactionsContext(ctx context.Context, addr string, page, offset int) ([]*Transaction, error) {
+	return c.transactions(ctx, addr, page, offset, txToken)
 }
