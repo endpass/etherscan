@@ -4,7 +4,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"io/ioutil"
 	"net/http"
 	"net/url"
 	"strings"
@@ -74,7 +73,7 @@ func (c *Client) buildRequest(params url.Values) (*http.Request, error) {
 }
 
 // Sends a request and returns the response body
-func (c *Client) sendRequest(ctx context.Context, req *http.Request) ([]byte, error) {
+func (c *Client) sendRequest(ctx context.Context, req *http.Request) (*http.Response, error) {
 	if ctx == nil {
 		return nil, errors.New("Context is nil")
 	}
@@ -82,10 +81,5 @@ func (c *Client) sendRequest(ctx context.Context, req *http.Request) ([]byte, er
 		return nil, errors.New("Request is nil")
 	}
 	req = req.WithContext(ctx)
-	resp, err := c.HTTPClient.Do(req)
-	if err != nil {
-		return nil, err
-	}
-	defer resp.Body.Close()
-	return ioutil.ReadAll(resp.Body)
+	return c.HTTPClient.Do(req)
 }

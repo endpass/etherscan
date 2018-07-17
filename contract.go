@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"io"
 	"net/http"
 	"net/url"
 	"strings"
@@ -16,9 +17,9 @@ type abiResponse struct {
 }
 
 // Parses a single balance response
-func parseABIResponse(data []byte) ([]byte, error) {
+func parseABIResponse(r io.Reader) ([]byte, error) {
 	res := &abiResponse{baseResponse: &baseResponse{}}
-	if err := json.Unmarshal(data, &res); err != nil {
+	if err := json.NewDecoder(r).Decode(&res); err != nil {
 		return nil, err
 	}
 	if err := checkResponse(res.baseResponse); err != nil {
@@ -44,11 +45,12 @@ func (c *Client) contractABI(ctx context.Context, addr string) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-	data, err := c.sendRequest(ctx, req)
+	resp, err := c.sendRequest(ctx, req)
 	if err != nil {
 		return nil, err
 	}
-	return parseABIResponse(data)
+	defer resp.Body.Close()
+	return parseABIResponse(resp.Body)
 }
 
 // ContractABI returns the raw, unparsed ABI definition for a smart contract

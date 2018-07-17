@@ -8,8 +8,8 @@ import (
 
 func TestContractABI(t *testing.T) {
 	assert := assert.New(t)
-	data := loadTestData(t, "abi.json")
-	rawABI, err := parseABIResponse(data)
+	r := loadTestData(t, "abi.json")
+	rawABI, err := parseABIResponse(r)
 	assert.NoError(err)
 	assert.NotEmpty(rawABI)
 	assert.Contains(string(rawABI), "inputs")

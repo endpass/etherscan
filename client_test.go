@@ -1,8 +1,9 @@
 package etherscan
 
 import (
-	"io/ioutil"
+	"io"
 	"net/url"
+	"os"
 	"path/filepath"
 	"testing"
 
@@ -10,13 +11,13 @@ import (
 )
 
 // Loads fixtures from testdata directory
-func loadTestData(t *testing.T, name string) []byte {
+func loadTestData(t *testing.T, name string) io.Reader {
 	path := filepath.Join("testdata", name) // relative path
-	bytes, err := ioutil.ReadFile(path)
+	f, err := os.Open(path)
 	if err != nil {
 		t.Fatal(err)
 	}
-	return bytes
+	return f
 }
 
 func TestDefaultClient(t *testing.T) {

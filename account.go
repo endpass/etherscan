@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"errors"
+	"io"
 	"math/big"
 	"net/http"
 	"net/url"
@@ -17,9 +18,9 @@ type balanceResponse struct {
 }
 
 // Parses a single balance response
-func parseBalanceResponse(data []byte) (*big.Int, error) {
+func parseBalanceResponse(r io.Reader) (*big.Int, error) {
 	res := &balanceResponse{baseResponse: &baseResponse{}}
-	if err := json.Unmarshal(data, &res); err != nil {
+	if err := json.NewDecoder(r).Decode(&res); err != nil {
 		return nil, err
 	}
 	if err := checkResponse(res.baseResponse); err != nil {
@@ -53,11 +54,12 @@ func (c *Client) balance(ctx context.Context, addr string) (*big.Int, error) {
 	if err != nil {
 		return nil, err
 	}
-	data, err := c.sendRequest(ctx, req)
+	resp, err := c.sendRequest(ctx, req)
 	if err != nil {
 		return nil, err
 	}
-	return parseBalanceResponse(data)
+	defer resp.Body.Close()
+	return parseBalanceResponse(resp.Body)
 }
 
 // Balance returns the balance of a single address
