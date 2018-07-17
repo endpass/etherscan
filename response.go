@@ -1,6 +1,10 @@
 package etherscan
 
-import "errors"
+import (
+	"errors"
+	"math/big"
+	"strconv"
+)
 
 // Basic fields in all responses
 type baseResponse struct {
@@ -18,4 +22,23 @@ func checkResponse(resp *baseResponse) error {
 		return errors.New("API Error: " + resp.Message)
 	}
 	return nil
+}
+
+// Parse integer and silently discard error
+func parseInt(s string) int {
+	n, _ := strconv.Atoi(s)
+	return n
+}
+
+// Parse bigInt and silently discard error
+func parseBig(s string) *big.Int {
+	num := &big.Int{}
+	num.SetString(s, 10)
+	return num
+}
+
+// Parse bool and silently discard error
+func parseBool(s string) bool {
+	v, _ := strconv.ParseBool(s)
+	return v
 }
