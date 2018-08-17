@@ -1,4 +1,7 @@
 # etherscan
+
+[![Build Status](https://travis-ci.org/endpass/etherscan.svg?branch=master)](https://travis-ci.org/endpass/etherscan)
+
 Go client library for the Etherscan.io Ethereum block explorer API.
 This library aims to be full-featured, well-tested, and easy to use.
 
