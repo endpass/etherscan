@@ -1,6 +1,7 @@
 package etherscan
 
 import (
+	"fmt"
 	"math/big"
 	"testing"
 	"time"
@@ -34,4 +35,36 @@ func TestTransactions(t *testing.T) {
 	assert.EqualValues(big.NewInt(20000000000), tx.GasPrice)
 	assert.Equal(false, tx.IsError)
 	assert.EqualValues(4018297, tx.Confirmations)
+}
+
+func ExampleClient_Transactions() {
+	client := &Client{
+		APIKey: "YOUR-API-KEY",
+	}
+
+	address := "0x5A0b54D5dc17e0AadC383d2db43B0a0D3E029c4c"
+
+	page := 1
+	limit := 10
+
+	transactions, err := client.Transactions(address, page, limit)
+	if err != nil {
+		fmt.Printf("ERROR: %s", err)
+		return
+	}
+	if len(transactions) == 0 {
+		return
+	}
+
+	tx := transactions[0]
+	fmt.Printf(`
+	Transaction Hash: %s
+	Block Number: %d
+	Time: %s
+	From: %s
+	To: %s
+	Value: %s
+	Confirmations: %d
+
+	`, tx.Hash, tx.Block.Number, tx.Timestamp, tx.From, tx.To, tx.Value, tx.Confirmations)
 }

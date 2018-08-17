@@ -1,11 +1,14 @@
 package etherscan
 
 import (
+	"context"
+	"fmt"
 	"io"
 	"net/url"
 	"os"
 	"path/filepath"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/assert"
 )
@@ -58,4 +61,38 @@ func TestBuildRequest(t *testing.T) {
 	assert.Contains(reqURL, "action=balance")
 	assert.Contains(reqURL, "apikey=test123")
 	assert.Contains(reqURL, "address=0x123")
+}
+
+func ExampleClient() {
+	client := &Client{
+		APIKey: "YOUR-API-KEY",
+		// Custom network. Can be mainnet, ropsten, kovan, or rinkeby
+		Network: "ropsten",
+	}
+
+	address := "0x5A0b54D5dc17e0AadC383d2db43B0a0D3E029c4c"
+
+	balance, err := client.Balance(address)
+	if err != nil {
+		fmt.Printf("ERROR: %s", err)
+		return
+	}
+	fmt.Printf("%s Balance: %s", address, balance)
+
+	// Amounts are in big.Int format, check math/big documentation
+}
+
+func ExampleClient_context() {
+	client := &Client{
+		APIKey: "YOUR-API-KEY",
+	}
+
+	address := "0x5A0b54D5dc17e0AadC383d2db43B0a0D3E029c4c"
+	ctx, cancel := context.WithTimeout(context.Background(), 15*time.Second)
+	defer cancel()
+
+	// Use context for timeout and cancellation
+	balance, err := client.BalanceContext(ctx, address)
+
+	fmt.Print(balance, err)
 }
