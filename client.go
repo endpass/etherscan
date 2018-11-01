@@ -63,7 +63,7 @@ func (c *Client) buildRequest(params url.Values) (*http.Request, error) {
 		params.Set("apikey", c.APIKey)
 	}
 
-	reqURL := c.apiBase + params.Encode()
+	reqURL := c.apiBase + "?" + params.Encode()
 	req, err := http.NewRequest("GET", reqURL, nil)
 	if err != nil {
 		return nil, err
