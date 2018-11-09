@@ -37,6 +37,23 @@ func parseBig(s string) *big.Int {
 	return num
 }
 
+func parseFloat(s string) *big.Float {
+	num := &big.Float{}
+	num.SetString(s)
+	return num
+}
+
+func parseIntFromHex(s string) int {
+	n, _ := strconv.ParseInt(s, 0, 0)
+	return int(n)
+}
+
+func parseBigFromHex(s string) *big.Int {
+	num := &big.Int{}
+	num.SetString(s, 0)
+	return num
+}
+
 // Parse bool and silently discard error
 func parseBool(s string) bool {
 	v, _ := strconv.ParseBool(s)

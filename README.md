@@ -45,7 +45,7 @@ Supported featues of the [Etherscan API](https://etherscan.io/apis):
 - [x] Accounts
 - [x] Contracts
 - [x] Transactions
-- [ ] Blocks
-- [ ] Event Logs
-- [ ] Tokens
-- [ ] Stats
+- [x] Blocks
+- [x] Event Logs
+- [x] Tokens
+- [x] Stats
