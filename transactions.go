@@ -231,12 +231,12 @@ func (c *Client) TokenTransactionsContext(ctx context.Context, addr string, page
 // InternalTransactions returns a list of internal contract transactions for
 // the contract at the given address
 func (c *Client) InternalTransactions(addr string, page, offset int) ([]*Transaction, error) {
-	return c.transactions(context.Background(), addr, page, offset, txToken)
+	return c.transactions(context.Background(), addr, page, offset, txInternal)
 }
 
 // InternalTransactionsContext returns a list of internal contract transactions for
 // the contract at the given address
 // with a custom context
 func (c *Client) InternalTransactionsContext(ctx context.Context, addr string, page, offset int) ([]*Transaction, error) {
-	return c.transactions(ctx, addr, page, offset, txToken)
+	return c.transactions(ctx, addr, page, offset, txInternal)
 }
